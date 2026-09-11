@@ -18,6 +18,7 @@ dependencies = [
     "python-multipart==0.0.20",
     "markupsafe==3.0.2",
     "markdown==3.7",
+    "curl_cffi==0.16.3",
 ]
 
 [project.optional-dependencies]

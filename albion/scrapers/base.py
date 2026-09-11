@@ -54,7 +54,7 @@ class BaseScraper:
         self._converter.wrap_links = False
 
     async def fetch(self, url: str) -> str:
-        """Fetch URL with retries."""
+        """Fetch URL with retries. Falls back to curl_cffi for Cloudflare-protected sites."""
         last_error = None
         for attempt in range(1, MAX_RETRIES + 1):
             try:
@@ -65,10 +65,32 @@ class BaseScraper:
                 ) as client:
                     resp = await client.get(url)
                     resp.raise_for_status()
-                    return resp.text
+                    # Cloudflare sometimes returns 200/202 with empty body
+                    if resp.text.strip():
+                        return resp.text
+                    raise httpx.HTTPStatusError(
+                        "Empty response (likely Cloudflare)",
+                        request=resp.request,
+                        response=resp,
+                    )
             except (httpx.HTTPError, httpx.TimeoutException) as exc:
                 last_error = exc
                 log.warning("Attempt %d/%d failed for %s: %s", attempt, MAX_RETRIES, url, exc)
+
+        # Fallback: curl_cffi with browser TLS fingerprint
+        log.info("Trying curl_cffi for Cloudflare bypass: %s", url)
+        try:
+            from curl_cffi import requests as cffi_requests
+
+            resp = cffi_requests.get(
+                url, impersonate="chrome", timeout=RETRY_TIMEOUT_SECONDS, allow_redirects=True,
+            )
+            resp.raise_for_status()
+            if resp.text.strip():
+                return resp.text
+        except Exception as exc:
+            log.warning("curl_cffi also failed for %s: %s", url, exc)
+
         raise RuntimeError(f"Failed to fetch {url} after {MAX_RETRIES} attempts: {last_error}")
 
     def html_to_markdown(self, html: str) -> str:

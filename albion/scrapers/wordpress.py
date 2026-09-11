@@ -160,6 +160,7 @@ class WordPressScraper(BaseScraper):
         for selector in [
             ".entry-content",
             ".post-content",
+            ".td-post-content",
             ".article-content",
             "article .content",
             ".post-body",
