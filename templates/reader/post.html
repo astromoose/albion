@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% block title %}{{ post.title }} - ALBION{% endblock %}
+
+{% block content %}
+<article class="post-full">
+    <header class="post-header">
+        <a href="/" class="back-link">&larr; Back to feed</a>
+        <h1>{{ post.title }}</h1>
+        <div class="post-meta">
+            <span class="source-name">{{ post.source.name }}</span>
+            {% if post.published_at %}
+            <time datetime="{{ post.published_at.isoformat() }}">{{ post.published_at.strftime('%d %B %Y') }}</time>
+            {% endif %}
+            {% if post.author %}
+            <span class="author">by {{ post.author }}</span>
+            {% endif %}
+            <a href="{{ post.url }}" class="original-link" target="_blank" rel="noopener">View original &rarr;</a>
+        </div>
+    </header>
+
+    {% if post.thumbnail %}
+    <div class="post-hero">
+        <img src="{{ post.thumbnail }}" alt="{{ post.title }}">
+    </div>
+    {% endif %}
+
+    <div class="post-body markdown-content">
+        {{ content | safe }}
+    </div>
+</article>
+{% endblock %}

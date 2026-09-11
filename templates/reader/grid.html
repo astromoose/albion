@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+{% block title %}ALBION - Grid{% endblock %}
+
+{% block content %}
+<div class="reader-header">
+    <h1>Latest Posts</h1>
+    <div class="source-filter">
+        <a href="/?view=grid" class="filter-chip{% if not current_source %} active{% endif %}">All</a>
+        {% for source in sources %}
+        <a href="/?view=grid&source_id={{ source.id }}" class="filter-chip{% if current_source == source.id %} active{% endif %}">{{ source.name }}</a>
+        {% endfor %}
+    </div>
+</div>
+
+<div class="card-grid">
+    {% for post in posts %}
+    <article class="card">
+        <a href="/post/{{ post.id }}" class="card-link">
+            {% if post.thumbnail %}
+            <div class="card-image">
+                <img src="{{ post.thumbnail }}" alt="{{ post.title }}" loading="lazy">
+            </div>
+            {% else %}
+            <div class="card-image card-placeholder">
+                <span>&#9876;</span>
+            </div>
+            {% endif %}
+            <div class="card-body">
+                <h3>{{ post.title }}</h3>
+                <div class="card-meta">
+                    <span class="source-name">{{ post.source.name }}</span>
+                    {% if post.published_at %}
+                    <time>{{ post.published_at.strftime('%d %b %Y') }}</time>
+                    {% endif %}
+                </div>
+            </div>
+        </a>
+    </article>
+    {% else %}
+    <div class="empty-state">
+        <p>No posts yet. Sources are being polled &mdash; check back soon.</p>
+    </div>
+    {% endfor %}
+</div>
+
+{% if total_pages > 1 %}
+<nav class="pagination">
+    {% if page > 1 %}
+    <a href="/?view=grid&page={{ page - 1 }}{% if current_source %}&source_id={{ current_source }}{% endif %}">&laquo; Prev</a>
+    {% endif %}
+    <span>Page {{ page }} of {{ total_pages }}</span>
+    {% if page < total_pages %}
+    <a href="/?view=grid&page={{ page + 1 }}{% if current_source %}&source_id={{ current_source }}{% endif %}">Next &raquo;</a>
+    {% endif %}
+</nav>
+{% endif %}
+{% endblock %}

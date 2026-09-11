@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="auto">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}ALBION{% endblock %}</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+    <script src="/static/js/app.js" defer></script>
+    <script src="https://unpkg.com/htmx.org@1.9.12" defer></script>
+</head>
+<body>
+    <header class="site-header">
+        <div class="container header-inner">
+            <a href="/" class="logo">ALBION</a>
+            <nav class="main-nav">
+                <a href="/?view=feed" class="nav-link{% if current_view == 'feed' %} active{% endif %}">Feed</a>
+                <a href="/?view=grid" class="nav-link{% if current_view == 'grid' %} active{% endif %}">Grid</a>
+                <a href="/admin" class="nav-link{% if request.url.path.startswith('/admin') %} active{% endif %}">Admin</a>
+                <button id="theme-toggle" class="theme-btn" aria-label="Toggle theme">
+                    <span class="icon-sun">&#9728;</span>
+                    <span class="icon-moon">&#9790;</span>
+                </button>
+            </nav>
+        </div>
+    </header>
+    <main class="container">
+        {% block content %}{% endblock %}
+    </main>
+    <footer class="site-footer">
+        <div class="container">
+            <p>ALBION &mdash; Tabletop Hobby Aggregator</p>
+        </div>
+    </footer>
+</body>
+</html>

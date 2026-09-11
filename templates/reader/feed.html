@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+{% block title %}ALBION - Feed{% endblock %}
+
+{% block content %}
+<div class="reader-header">
+    <h1>Latest Posts</h1>
+    <div class="source-filter">
+        <a href="/?view=feed" class="filter-chip{% if not current_source %} active{% endif %}">All</a>
+        {% for source in sources %}
+        <a href="/?view=feed&source_id={{ source.id }}" class="filter-chip{% if current_source == source.id %} active{% endif %}">{{ source.name }}</a>
+        {% endfor %}
+    </div>
+</div>
+
+<div class="feed-list">
+    {% for post in posts %}
+    <article class="feed-item">
+        {% if post.thumbnail %}
+        <div class="feed-thumb">
+            <a href="/post/{{ post.id }}">
+                <img src="{{ post.thumbnail }}" alt="{{ post.title }}" loading="lazy">
+            </a>
+        </div>
+        {% endif %}
+        <div class="feed-content">
+            <h2><a href="/post/{{ post.id }}">{{ post.title }}</a></h2>
+            <div class="feed-meta">
+                <span class="source-name">{{ post.source.name }}</span>
+                {% if post.published_at %}
+                <time datetime="{{ post.published_at.isoformat() }}">{{ post.published_at.strftime('%d %b %Y') }}</time>
+                {% endif %}
+                {% if post.author %}
+                <span class="author">{{ post.author }}</span>
+                {% endif %}
+            </div>
+            {% if post.excerpt %}
+            <p class="excerpt">{{ post.excerpt }}</p>
+            {% endif %}
+            <a href="{{ post.url }}" class="original-link" target="_blank" rel="noopener">Original &rarr;</a>
+        </div>
+    </article>
+    {% else %}
+    <div class="empty-state">
+        <p>No posts yet. Sources are being polled &mdash; check back soon.</p>
+    </div>
+    {% endfor %}
+</div>
+
+{% if total_pages > 1 %}
+<nav class="pagination">
+    {% if page > 1 %}
+    <a href="/?view=feed&page={{ page - 1 }}{% if current_source %}&source_id={{ current_source }}{% endif %}">&laquo; Prev</a>
+    {% endif %}
+    <span>Page {{ page }} of {{ total_pages }}</span>
+    {% if page < total_pages %}
+    <a href="/?view=feed&page={{ page + 1 }}{% if current_source %}&source_id={{ current_source }}{% endif %}">Next &raquo;</a>
+    {% endif %}
+</nav>
+{% endif %}
+{% endblock %}

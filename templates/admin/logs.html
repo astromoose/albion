@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+{% block title %}Logs - ALBION{% endblock %}
+
+{% block content %}
+<div class="admin-header">
+    <h1>Poll Logs</h1>
+    <a href="/admin" class="btn btn-secondary">&larr; Back</a>
+</div>
+
+<div class="log-filters">
+    <a href="/admin/logs" class="filter-chip{% if not current_status %} active{% endif %}">All</a>
+    <a href="/admin/logs?status=success" class="filter-chip{% if current_status == 'success' %} active{% endif %}">Success</a>
+    <a href="/admin/logs?status=error" class="filter-chip{% if current_status == 'error' %} active{% endif %}">Errors</a>
+    {% if current_source %}
+    <span class="muted">|</span>
+    <a href="/admin/logs" class="filter-chip">Clear source filter</a>
+    {% endif %}
+</div>
+
+<div class="log-table">
+    <table>
+        <thead>
+            <tr>
+                <th>Time</th>
+                <th>Source</th>
+                <th>Status</th>
+                <th>Posts Found</th>
+                <th>Message</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for log in logs %}
+            <tr>
+                <td><time>{{ log.timestamp.strftime('%d %b %Y %H:%M:%S') }}</time></td>
+                <td>{{ log.source.name }}</td>
+                <td><span class="status-badge status-{{ log.status }}">{{ log.status }}</span></td>
+                <td>{{ log.posts_found }}</td>
+                <td class="message-cell">{{ log.message or '' }}</td>
+            </tr>
+            {% else %}
+            <tr>
+                <td colspan="5" class="empty-state">No logs yet.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+{% if total_pages > 1 %}
+<nav class="pagination">
+    {% if page > 1 %}
+    <a href="/admin/logs?page={{ page - 1 }}{% if current_source %}&source_id={{ current_source }}{% endif %}{% if current_status %}&status={{ current_status }}{% endif %}">&laquo; Prev</a>
+    {% endif %}
+    <span>Page {{ page }} of {{ total_pages }}</span>
+    {% if page < total_pages %}
+    <a href="/admin/logs?page={{ page + 1 }}{% if current_source %}&source_id={{ current_source }}{% endif %}{% if current_status %}&status={{ current_status }}{% endif %}">Next &raquo;</a>
+    {% endif %}
+</nav>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,100 @@
+{% extends "base.html" %}
+{% block title %}Admin - ALBION{% endblock %}
+
+{% block content %}
+<div class="admin-header">
+    <h1>Admin Dashboard</h1>
+    <div class="admin-actions">
+        <a href="/admin/sources/add" class="btn btn-primary">+ Add Source</a>
+        <a href="/admin/logs" class="btn btn-secondary">View Logs</a>
+    </div>
+</div>
+
+<div class="stats-bar">
+    <div class="stat">
+        <span class="stat-value">{{ sources | length }}</span>
+        <span class="stat-label">Sources</span>
+    </div>
+    <div class="stat">
+        <span class="stat-value">{{ total_posts }}</span>
+        <span class="stat-label">Posts</span>
+    </div>
+    <div class="stat">
+        <span class="stat-value">{{ recent_errors | length }}</span>
+        <span class="stat-label">Recent Errors</span>
+    </div>
+</div>
+
+<h2>Sources</h2>
+<div class="sources-table">
+    <table>
+        <thead>
+            <tr>
+                <th>Name</th>
+                <th>URL</th>
+                <th>Type</th>
+                <th>Interval</th>
+                <th>Posts</th>
+                <th>Last Poll</th>
+                <th>Status</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for source in sources %}
+            {% set stats = source_stats[source.id] %}
+            <tr class="{% if not source.enabled %}disabled-row{% endif %}">
+                <td>{{ source.name }}</td>
+                <td class="url-cell"><a href="{{ source.url }}" target="_blank">{{ source.url | truncate(40) }}</a></td>
+                <td><code>{{ source.scraper_type }}</code></td>
+                <td>{{ source.poll_interval_minutes }}m</td>
+                <td>{{ stats.post_count }}</td>
+                <td>
+                    {% if stats.last_log %}
+                    <time>{{ stats.last_log.timestamp.strftime('%d %b %H:%M') }}</time>
+                    {% else %}
+                    <span class="muted">Never</span>
+                    {% endif %}
+                </td>
+                <td>
+                    {% if stats.last_log %}
+                    <span class="status-badge status-{{ stats.last_log.status }}">{{ stats.last_log.status }}</span>
+                    {% else %}
+                    <span class="status-badge status-pending">pending</span>
+                    {% endif %}
+                </td>
+                <td class="actions-cell">
+                    <form method="post" action="/admin/sources/{{ source.id }}/poll" class="inline-form">
+                        <button type="submit" class="btn btn-sm" title="Poll now">&#8635;</button>
+                    </form>
+                    <form method="post" action="/admin/sources/{{ source.id }}/toggle" class="inline-form">
+                        <button type="submit" class="btn btn-sm" title="{% if source.enabled %}Disable{% else %}Enable{% endif %}">
+                            {% if source.enabled %}&#10003;{% else %}&#10007;{% endif %}
+                        </button>
+                    </form>
+                    <form method="post" action="/admin/sources/{{ source.id }}/delete" class="inline-form"
+                          onsubmit="return confirm('Delete {{ source.name }} and all its posts?')">
+                        <button type="submit" class="btn btn-sm btn-danger" title="Delete">&#128465;</button>
+                    </form>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+{% if recent_errors %}
+<h2>Recent Errors</h2>
+<div class="error-list">
+    {% for log in recent_errors %}
+    <div class="error-item">
+        <div class="error-meta">
+            <span class="source-name">{{ log.source.name }}</span>
+            <time>{{ log.timestamp.strftime('%d %b %Y %H:%M') }}</time>
+        </div>
+        <pre class="error-message">{{ log.message }}</pre>
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
+{% endblock %}

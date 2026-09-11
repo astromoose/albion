@@ -1,0 +1,15 @@
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+.venv/
+venv/
+*.db
+*.db-shm
+*.db-wal
+*.sqlite
+.env
+content/
+*.log
+.ruff_cache/
