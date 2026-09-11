@@ -164,13 +164,16 @@ class WordPressScraper(BaseScraper):
             "article .content",
             ".post-body",
             "article",
+            ".hentry",
+            ".type-post",
         ]:
             content = soup.select_one(selector)
             if content:
                 # Remove nav, sidebar, comments, sharing widgets
                 for unwanted in content.select(
                     "nav, .sidebar, .comments, .share, .social, .related-posts, "
-                    ".post-navigation, .author-bio, script, style, .ad, .advertisement"
+                    ".post-navigation, .author-bio, script, style, .ad, .advertisement, "
+                    ".content-sidebar, .tagcloud"
                 ):
                     unwanted.decompose()
                 return str(content)

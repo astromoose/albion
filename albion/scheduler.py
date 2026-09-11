@@ -42,50 +42,82 @@ async def poll_source(source_id: int):
 
                 try:
                     full_post = await scraper.scrape_post(post_data.url)
+                except Exception as exc:
+                    log.warning("Full scrape failed for %s, using feed data: %s",
+                                post_data.url, exc)
+                    full_post = None
+
+                try:
+                    # Merge full scrape with feed data, preferring full scrape
+                    title = (full_post.title if full_post else None) or post_data.title
+                    url = post_data.url
+                    author = (full_post.author if full_post else None) or post_data.author
+                    published = (
+                        (full_post.published_at if full_post else None)
+                        or post_data.published_at
+                    )
+                    thumbnail = (
+                        (full_post.thumbnail if full_post else None)
+                        or post_data.thumbnail
+                    )
+                    subscriber_only = (
+                        full_post.subscriber_only if full_post else False
+                    )
 
                     # Skip subscriber-only content
-                    if full_post.subscriber_only:
-                        log.info("Skipping subscriber-only: %s", full_post.title)
+                    if subscriber_only:
+                        log.info("Skipping subscriber-only: %s", title)
                         continue
 
-                    # Use feed data for fields the full scrape may miss
-                    published = full_post.published_at or post_data.published_at
-                    thumbnail = full_post.thumbnail or post_data.thumbnail
-                    author = full_post.author or post_data.author
+                    # Build content: prefer full scrape, fall back to feed content/summary
+                    content_html = (
+                        (full_post.content_html if full_post else "")
+                        or post_data.content_html
+                    )
+                    content_md = scraper.html_to_markdown(content_html) if content_html else ""
 
-                    content_md = scraper.html_to_markdown(full_post.content_html)
-                    rel_path = build_post_path(source.url, full_post.title, published)
+                    # Last resort: use excerpt as body
+                    if not content_md.strip():
+                        content_md = post_data.excerpt or ""
+
+                    rel_path = build_post_path(source.url, title, published)
 
                     save_post_markdown(
                         relative_path=rel_path,
-                        title=full_post.title,
-                        url=full_post.url,
+                        title=title,
+                        url=url,
                         author=author,
                         published_at=published,
                         content_md=content_md,
                         thumbnail=thumbnail,
                     )
 
+                    excerpt = (
+                        (full_post.excerpt if full_post else None)
+                        or post_data.excerpt
+                        or scraper._extract_excerpt(content_md)
+                    )
+
                     db_post = Post(
                         source_id=source.id,
-                        title=full_post.title,
-                        url=full_post.url,
+                        title=title,
+                        url=url,
                         author=author,
                         published_at=published,
                         file_path=str(rel_path),
                         thumbnail=thumbnail,
                         subscriber_only=False,
-                        excerpt=full_post.excerpt or post_data.excerpt,
+                        excerpt=excerpt,
                     )
                     db.add(db_post)
                     db.commit()
                     posts_added += 1
 
                     # Send notification
-                    await notify_new_post(full_post.title, full_post.url, source.name)
+                    await notify_new_post(title, url, source.name)
 
                 except Exception as exc:
-                    log.error("Failed to scrape post %s: %s", post_data.url, exc)
+                    log.error("Failed to process post %s: %s", post_data.url, exc)
                     continue
 
             db.add(PollLog(
