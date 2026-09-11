@@ -80,10 +80,13 @@ class WarhammerCommunityScraper(BaseScraper):
         posts = []
         seen_urls = set()
 
-        # Find all links to /en-gb/articles/ pages
+        # WarCom article URLs: /en-gb/articles/<hash-id>/<slug>/
+        # Category/nav pages lack the hash-id segment
+        article_pattern = re.compile(r"/en-gb/articles/[a-z0-9]{6,}/[^/]+/?$")
+
         for a_tag in soup.find_all("a", href=True):
             href = a_tag["href"]
-            if "/en-gb/articles/" not in href:
+            if not article_pattern.search(href):
                 continue
 
             url = href if href.startswith("http") else WHCOM_BASE + href
@@ -187,18 +190,21 @@ class WarhammerCommunityScraper(BaseScraper):
 
     def _extract_content(self, soup: BeautifulSoup) -> str:
         for selector in [
-            "article",
             ".article-content",
-            ".post-content",
+            ".articleLeftAligned-template",
+            ".article-template",
             '[class*="ArticleContent"]',
             '[class*="article-body"]',
+            "article",
             "main",
         ]:
             content = soup.select_one(selector)
             if content:
                 for unwanted in content.select(
                     "nav, header, footer, .sidebar, .comments, .share, .social, "
-                    ".related, script, style, .ad, .newsletter, [class*='Newsletter']"
+                    ".related, script, style, .ad, .newsletter, "
+                    "[class*='Newsletter'], [class*='newsGrid'], "
+                    "[class*='NewsGrid'], .site-footer"
                 ):
                     unwanted.decompose()
                 return str(content)
