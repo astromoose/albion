@@ -1,0 +1,9 @@
+[Unit]
+Description=ALBION SQLite backup
+
+[Service]
+Type=oneshot
+User=albion
+ExecStart=/usr/bin/sqlite3 /var/lib/albion/albion.db ".backup /var/lib/albion/backups/albion-daily.sqlite3"
+ExecStartPost=/bin/sh -c 'cp /var/lib/albion/backups/albion-daily.sqlite3 /var/lib/albion/backups/albion-$(date +%%F).sqlite3'
+ExecStartPost=/usr/bin/find /var/lib/albion/backups -name "albion-2*.sqlite3" -mtime +14 -delete

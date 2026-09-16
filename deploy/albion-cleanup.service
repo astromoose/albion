@@ -1,0 +1,7 @@
+[Unit]
+Description=ALBION content cleanup (remove posts older than 6 months)
+
+[Service]
+Type=oneshot
+User=albion
+ExecStart=/bin/bash /opt/albion/deploy/albion-cleanup.sh

@@ -1,0 +1,23 @@
+[Unit]
+Description=ALBION — tabletop hobby blog aggregator
+After=network.target
+
+[Service]
+Type=simple
+User=albion
+Group=albion
+WorkingDirectory=/opt/albion
+EnvironmentFile=/etc/albion.env
+ExecStart=/opt/albion/.venv/bin/python -m uvicorn albion.main:app --host 127.0.0.1 --port 8420
+Restart=always
+RestartSec=5
+
+# Hardening
+NoNewPrivileges=true
+ProtectSystem=full
+ProtectHome=true
+PrivateTmp=true
+ReadWritePaths=/var/lib/albion
+
+[Install]
+WantedBy=multi-user.target
