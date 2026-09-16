@@ -6,14 +6,12 @@ set -euo pipefail
 DOMAIN="${DOMAIN:-albion.dirtyblades.com}"
 APP_DIR=/opt/albion
 DATA_DIR=/var/lib/albion
-PYTHON_VERSION=3.12
-
 echo "==> ALBION setup for ${DOMAIN}"
 
 echo "==> Installing system packages"
 apt-get update -q
 DEBIAN_FRONTEND=noninteractive apt-get install -qy \
-  python${PYTHON_VERSION} python${PYTHON_VERSION}-venv python${PYTHON_VERSION}-dev \
+  python3 python3-venv python3-dev \
   build-essential git libsqlite3-dev sqlite3 pkg-config curl
 
 echo "==> Creating albion user and directories"
@@ -29,7 +27,7 @@ chown -R albion:albion "$APP_DIR" "$DATA_DIR"
 echo "==> Creating virtualenv and installing"
 sudo -u albion -H sh -c "
   cd $APP_DIR
-  python${PYTHON_VERSION} -m venv .venv
+  python3 -m venv .venv
   .venv/bin/pip install --upgrade pip
   .venv/bin/pip install -e .
 "
