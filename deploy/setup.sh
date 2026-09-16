@@ -12,7 +12,8 @@ echo "==> Installing system packages"
 apt-get update -q
 DEBIAN_FRONTEND=noninteractive apt-get install -qy \
   python3 python3-venv python3-dev \
-  build-essential git libsqlite3-dev sqlite3 pkg-config curl
+  build-essential git libsqlite3-dev sqlite3 pkg-config curl \
+  libxml2-dev libxslt1-dev
 
 echo "==> Creating albion user and directories"
 id -u albion &> /dev/null || useradd --system --home-dir "$APP_DIR" --shell /usr/sbin/nologin albion
