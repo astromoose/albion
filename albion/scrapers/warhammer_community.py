@@ -27,20 +27,31 @@ class WarhammerCommunityScraper(BaseScraper):
     """Scraper for warhammer-community.com which uses a custom CMS/Next.js."""
 
     async def discover_posts(self) -> list[ScrapedPost]:
-        """Discover recent posts from the WarCom sitemap.
+        """Discover posts from both sitemap (dated backfill) and homepage (freshest).
 
-        Parses sitemap.xml and returns en-gb articles modified in the last
-        7 days. Falls back to homepage scraping if sitemap fetch fails.
+        The sitemap is CDN-cached and can lag by days, so the homepage is
+        always checked for the latest articles. Results are merged by URL.
         """
-        try:
-            posts = await self._discover_from_sitemap()
-            if posts:
-                return posts
-        except Exception as exc:
-            log.warning("Sitemap discovery failed, falling back to homepage: %s", exc)
+        seen_urls: dict[str, ScrapedPost] = {}
 
-        # Fallback: homepage scraping
-        return await self._discover_from_homepage()
+        # Sitemap: recent articles with publish dates
+        try:
+            for post in await self._discover_from_sitemap():
+                seen_urls[post.url] = post
+        except Exception as exc:
+            log.warning("Sitemap discovery failed: %s", exc)
+
+        # Homepage: today's featured articles (may lack dates)
+        try:
+            for post in await self._discover_from_homepage():
+                if post.url not in seen_urls:
+                    seen_urls[post.url] = post
+        except Exception as exc:
+            log.warning("Homepage discovery failed: %s", exc)
+
+        posts = list(seen_urls.values())
+        log.info("WarCom discovery: %d articles (sitemap + homepage)", len(posts))
+        return posts
 
     async def _discover_from_sitemap(self) -> list[ScrapedPost]:
         """Parse sitemap.xml for recent en-gb articles."""
