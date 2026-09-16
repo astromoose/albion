@@ -3,7 +3,8 @@
 import json
 import logging
 import re
-from datetime import datetime, timezone
+import xml.etree.ElementTree as ET
+from datetime import datetime, timedelta, timezone
 
 from bs4 import BeautifulSoup
 
@@ -13,29 +14,81 @@ log = logging.getLogger(__name__)
 
 WHCOM_BASE = "https://www.warhammer-community.com"
 WHCOM_HOME = f"{WHCOM_BASE}/en-gb/"
+WHCOM_SITEMAP = f"{WHCOM_BASE}/sitemap.xml"
+
+# Only en-gb articles with a hash-like ID segment (not category/nav pages)
+ARTICLE_PATTERN = re.compile(r"/en-gb/articles/[a-zA-Z0-9]{6,}/[^/]+/?$")
+
+# Sitemap XML namespace
+SITEMAP_NS = {"sm": "http://www.sitemaps.org/schemas/sitemap/0.9"}
 
 
 class WarhammerCommunityScraper(BaseScraper):
     """Scraper for warhammer-community.com which uses a custom CMS/Next.js."""
 
     async def discover_posts(self) -> list[ScrapedPost]:
-        """Discover posts from the Warhammer Community homepage."""
+        """Discover recent posts from the WarCom sitemap.
+
+        Parses sitemap.xml and returns en-gb articles modified in the last
+        7 days. Falls back to homepage scraping if sitemap fetch fails.
+        """
+        try:
+            posts = await self._discover_from_sitemap()
+            if posts:
+                return posts
+        except Exception as exc:
+            log.warning("Sitemap discovery failed, falling back to homepage: %s", exc)
+
+        # Fallback: homepage scraping
+        return await self._discover_from_homepage()
+
+    async def _discover_from_sitemap(self) -> list[ScrapedPost]:
+        """Parse sitemap.xml for recent en-gb articles."""
+        xml_text = await self.fetch(WHCOM_SITEMAP)
+        root = ET.fromstring(xml_text)
+
+        cutoff = datetime.now(timezone.utc) - timedelta(days=7)
+        posts = []
+
+        for url_elem in root.findall("sm:url", SITEMAP_NS):
+            loc = url_elem.findtext("sm:loc", "", SITEMAP_NS)
+            lastmod = url_elem.findtext("sm:lastmod", "", SITEMAP_NS)
+
+            if not ARTICLE_PATTERN.search(loc):
+                continue
+
+            pub_date = self._parse_date(lastmod) if lastmod else None
+            if pub_date and pub_date < cutoff:
+                continue
+
+            slug = loc.rstrip("/").rsplit("/", 1)[-1]
+            title = slug.replace("-", " ").title()
+
+            posts.append(ScrapedPost(
+                title=title,
+                url=loc,
+                published_at=pub_date,
+            ))
+
+        log.info("Sitemap discovery: %d recent articles found", len(posts))
+        return posts
+
+    async def _discover_from_homepage(self) -> list[ScrapedPost]:
+        """Fallback: discover posts from the homepage."""
         posts = []
         try:
             html = await self.fetch(WHCOM_HOME)
             soup = BeautifulSoup(html, "lxml")
 
-            # Try to extract from Next.js __NEXT_DATA__ JSON
             next_data = soup.find("script", {"id": "__NEXT_DATA__"})
             if next_data:
                 posts = self._parse_next_data(next_data.string)
                 if posts:
                     return posts
 
-            # Fallback: parse article links from homepage
             posts = self._parse_article_cards(soup)
         except Exception as exc:
-            log.error("Failed to discover WarCom posts: %s", exc)
+            log.error("Failed to discover WarCom posts from homepage: %s", exc)
         return posts
 
     def _parse_next_data(self, json_str: str) -> list[ScrapedPost]:
@@ -80,13 +133,9 @@ class WarhammerCommunityScraper(BaseScraper):
         posts = []
         seen_urls = set()
 
-        # WarCom article URLs: /en-gb/articles/<hash-id>/<slug>/
-        # Category/nav pages lack the hash-id segment
-        article_pattern = re.compile(r"/en-gb/articles/[a-z0-9]{6,}/[^/]+/?$")
-
         for a_tag in soup.find_all("a", href=True):
             href = a_tag["href"]
-            if not article_pattern.search(href):
+            if not ARTICLE_PATTERN.search(href):
                 continue
 
             url = href if href.startswith("http") else WHCOM_BASE + href
