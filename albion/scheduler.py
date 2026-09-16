@@ -55,6 +55,7 @@ async def poll_source(source_id: int):
                     published = (
                         (full_post.published_at if full_post else None)
                         or post_data.published_at
+                        or datetime.now(timezone.utc)  # fallback to scrape time
                     )
                     thumbnail = (
                         (full_post.thumbnail if full_post else None)
